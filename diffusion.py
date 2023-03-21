@@ -8,6 +8,7 @@ def extract(v, t, x_shape):
     Extract some coefficients at specified timesteps, then reshape to
     [batch_size, 1, 1, 1, 1, ...] for broadcasting purposes.
     """
+    # [batch_size, channels, height, width]
     out = torch.gather(v, index=t, dim=0).float()
     return out.view([t.shape[0]] + [1] * (len(x_shape) - 1))
 
@@ -20,7 +21,7 @@ class GaussianDiffusionTrainer(nn.Module):
         self.T = T
 
         self.register_buffer(
-            'betas', torch.linspace(beta_1, beta_T, T).double())
+            'betas', torch.linspace(beta_1, beta_T, T).double()) # fixed noise
         alphas = 1. - self.betas
         alphas_bar = torch.cumprod(alphas, dim=0)
 

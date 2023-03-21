@@ -5,7 +5,7 @@ import warnings
 from absl import app, flags
 
 import torch
-from tensorboardX import SummaryWriter
+from torch.utils.tensorboard import SummaryWriter
 from torchvision.datasets import CIFAR10
 from torchvision.utils import make_grid, save_image
 from torchvision import transforms
@@ -52,7 +52,7 @@ flags.DEFINE_integer('num_images', 50000, help='the number of generated images f
 flags.DEFINE_bool('fid_use_torch', False, help='calculate IS and FID on gpu')
 flags.DEFINE_string('fid_cache', './stats/cifar10.train.npz', help='FID cache')
 
-device = torch.device('cuda:0')
+device = 'cpu' #torch.device('cuda:0')
 
 
 def ema(source, target, decay):
@@ -110,17 +110,24 @@ def train():
     net_model = UNet(
         T=FLAGS.T, ch=FLAGS.ch, ch_mult=FLAGS.ch_mult, attn=FLAGS.attn,
         num_res_blocks=FLAGS.num_res_blocks, dropout=FLAGS.dropout)
+    
     ema_model = copy.deepcopy(net_model)
+
     optim = torch.optim.Adam(net_model.parameters(), lr=FLAGS.lr)
+
     sched = torch.optim.lr_scheduler.LambdaLR(optim, lr_lambda=warmup_lr)
+
     trainer = GaussianDiffusionTrainer(
         net_model, FLAGS.beta_1, FLAGS.beta_T, FLAGS.T).to(device)
+    
     net_sampler = GaussianDiffusionSampler(
         net_model, FLAGS.beta_1, FLAGS.beta_T, FLAGS.T, FLAGS.img_size,
         FLAGS.mean_type, FLAGS.var_type).to(device)
+    
     ema_sampler = GaussianDiffusionSampler(
         ema_model, FLAGS.beta_1, FLAGS.beta_T, FLAGS.T, FLAGS.img_size,
         FLAGS.mean_type, FLAGS.var_type).to(device)
+    
     if FLAGS.parallel:
         trainer = torch.nn.DataParallel(trainer)
         net_sampler = torch.nn.DataParallel(net_sampler)
